@@ -93,7 +93,7 @@ GenBridge는 AI 기반 음성 인식(OpenAI Whisper)과 자연어 처리(NLP) �
 
 | 영역         | 주요 기술 및 도구                                                                                  | 근거/비고                               |
 |--------------|---------------------------------------------------------------------------------------------------|-----------------------------------------|
-| 프론트엔드   | React, Tailwind CSS, React Router, Axios                                                          | 최신 웹 트렌드, 반응형 UI, 접근성 강화 |
+| 프론트엔드   | React, Tailwind CSS, React Router,  Axios                                                          | 최신 웹 트렌드, 반응형 UI, 접근성 강화 |
 | 백엔드       | Node.js, Express, MongoDB(Atlas), JWT, bcrypt                                                     | 실시간 처리, 확장성, 데이터 관리 |
 | 벡터 검색    | Pinecone API                                                                                       | 대규모 의미 기반 유사 질문 검색     |
 | 음성 인식    | OpenAI Whisper API                                                                                | 고정확도 음성 인식                      |

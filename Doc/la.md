@@ -185,7 +185,7 @@
     - `<PointsPage>`: 포인트 적립 내역
     - `<Modal>`, `<ToastNotification>`: 피드백 및 실시간 알림
 
----
+--- 
 
 ## 추가 고려사항
 

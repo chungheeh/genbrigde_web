@@ -6,7 +6,7 @@
 
 - Actor Definitions
 - Use Case Scenarios
-- Main Steps
+- Main Steps 
 - Exception Handling
 - Comprehensive Actor Definitions
 - Detailed Use Case Scenarios

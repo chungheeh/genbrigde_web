@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { SeniorHeader } from '@/features/senior/components/SeniorHeader';
+import { AutoTutorial } from '@/features/tutorial/components/AutoTutorial';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
@@ -204,6 +205,9 @@ export default function AskAIPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <SeniorHeader />
+
+      {/* 자동 튜토리얼 */}
+      <AutoTutorial />
 
       <div className="senior-nav">
         <div className="max-w-[1200px] mx-auto px-4">

@@ -79,6 +79,7 @@ export default function PointsPage() {
       ]);
       toast.success('포인트 내역이 갱신되었습니다.');
     } catch (error) {
+      console.error('포인트 내역 갱신 오류:', error);
       toast.error('포인트 내역 갱신에 실패했습니다.');
     } finally {
       setIsRefreshing(false);
@@ -92,7 +93,9 @@ export default function PointsPage() {
           <AlertCircle className="h-8 w-8 text-destructive mx-auto" />
           <p className="text-lg font-medium">데이터를 불러오는데 실패했습니다</p>
           <p className="text-sm text-neutral-400">
-            {summaryError?.message || historyError?.message || "잠시 후 다시 시도해주세요"}
+            {summaryError instanceof Error ? summaryError.message : 
+             historyError instanceof Error ? historyError.message : 
+             "잠시 후 다시 시도해주세요"}
           </p>
           <Button 
             variant="outline" 

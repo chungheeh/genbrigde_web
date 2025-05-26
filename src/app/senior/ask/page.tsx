@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { toast } from 'sonner';
 import VoiceRecorder from "@/features/senior/components/VoiceRecorder";
 import { SeniorHeader } from "@/features/senior/components/SeniorHeader";
+import { AutoTutorial } from '@/features/tutorial/components/AutoTutorial';
 import { Database } from '@/types/supabase';
 import { Input } from '@/components/ui/input';
 import ImageUploader from "@/features/senior/components/ImageUploader";
@@ -119,6 +120,9 @@ export default function SeniorPage() {
     <div className="min-h-screen flex flex-col">
       {/* 헤더 섹션 */}
       <SeniorHeader />
+
+      {/* 자동 튜토리얼 */}
+      <AutoTutorial />
 
       {/* 탭 메뉴 */}
       <div className="senior-nav">

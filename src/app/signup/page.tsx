@@ -20,6 +20,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from "@/hooks/use-toast";
 import SignupSuccess from '@/components/SignupSuccess'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import SocialLoginButtons from "@/components/SocialLoginButtons";
+import { Separator } from "@/components/ui/separator";
 
 // Supabase 클라이언트 생성
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -514,6 +516,18 @@ export default function SignupPage() {
             <div className="space-y-2">
               <h1 className="text-2xl font-bold text-center">회원가입</h1>
               <p className="text-center text-gray-600">세대 간 소통의 시작, 젠브릿지와 함께하세요.</p>
+            </div>
+
+            {/* 간편 가입 섹션 */}
+            <div className="space-y-4">
+              <p className="text-center text-sm text-gray-600">소셜 계정으로 빠르게 시작하기</p>
+              <SocialLoginButtons redirectUrl="/dashboard" />
+              
+              <div className="flex items-center gap-4 py-2">
+                <Separator className="flex-1" />
+                <span className="text-xs text-gray-500">또는 이메일로 가입</span>
+                <Separator className="flex-1" />
+              </div>
             </div>
 
             {/* 약관 동의 섹션 */}

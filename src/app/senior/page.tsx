@@ -4,13 +4,14 @@ import { motion } from 'framer-motion';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Search, MessageSquare, CheckCircle, User, Plus, Clock, HelpCircle, MessageCircle, UserCircle, Bot } from "lucide-react";
+import { Search, MessageSquare, CheckCircle, User, Plus, Clock, HelpCircle, MessageCircle, UserCircle, Bot, Pencil, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { SeniorHeader } from '@/features/senior/components/SeniorHeader';
+import { AutoTutorial } from '@/features/tutorial/components/AutoTutorial';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +23,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import * as z from 'zod';
+import { textValidationSchema } from '@/lib/validation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 
 interface Question {
   id: string;
@@ -33,17 +49,77 @@ interface Question {
   title: string;
 }
 
+// 질문 수정 폼 스키마 정의
+const editQuestionSchema = z.object({
+  content: z.string()
+    .min(10, '질문은 최소 10자 이상이어야 합니다.')
+    .max(2000, '질문은 최대 2000자까지 입력 가능합니다.')
+    .pipe(textValidationSchema)
+});
+
+type EditQuestionFormValues = z.infer<typeof editQuestionSchema>;
+
 export default function SeniorMainPage() {
   const [userName, setUserName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const supabase = createClientComponentClient();
   const router = useRouter();
+
+  // 질문 수정 폼
+  const form = useForm<EditQuestionFormValues>({
+    resolver: zodResolver(editQuestionSchema),
+    defaultValues: {
+      content: '',
+    }
+  });
+
+  // 모달 열릴 때 폼 초기화
+  useEffect(() => {
+    if (editingQuestion) {
+      form.reset({ content: editingQuestion.content });
+    }
+  }, [editingQuestion, form]);
 
   const handleAskClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     router.push('/senior/ask');
+  };
+
+  // 질문 수정 처리 함수
+  const handleEditQuestion = async (values: EditQuestionFormValues) => {
+    if (!editingQuestion) return;
+
+    setIsEditing(true);
+    try {
+      const { error } = await supabase
+        .from('questions')
+        .update({ content: values.content.trim() })
+        .eq('id', editingQuestion.id);
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      setQuestions(prev =>
+        prev.map(question =>
+          question.id === editingQuestion.id
+            ? { ...question, content: values.content.trim() }
+            : question
+        )
+      );
+
+      toast.success('질문이 수정되었습니다.');
+      setEditingQuestion(null);
+      form.reset();
+    } catch (error) {
+      console.error('질문 수정 실패:', error);
+      toast.error('질문 수정에 실패했습니다.');
+    } finally {
+      setIsEditing(false);
+    }
   };
 
   useEffect(() => {
@@ -248,6 +324,9 @@ export default function SeniorMainPage() {
       {/* 헤더 섹션 */}
       <SeniorHeader />
 
+      {/* 자동 튜토리얼 */}
+      <AutoTutorial />
+
       {/* 탭 메뉴 */}
       <div className="senior-nav">
         <div className="max-w-[1200px] mx-auto px-4">
@@ -363,11 +442,10 @@ export default function SeniorMainPage() {
                             variant="ghost"
                             size="sm"
                             className="ml-4 hover:bg-senior-bg"
-                            asChild
+                            onClick={() => setEditingQuestion(question)}
                           >
-                            <Link href={`/senior/answers/${question.id}`}>
-                              자세히 보기
-                            </Link>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            질문 수정
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -426,6 +504,56 @@ export default function SeniorMainPage() {
           </div>
         </div>
       </main>
+
+      {/* 질문 수정 모달 */}
+      <Dialog open={editingQuestion !== null} onOpenChange={(open) => !open && setEditingQuestion(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>질문 수정하기</DialogTitle>
+            <DialogDescription className="text-neutral-400">
+              질문 내용을 수정해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEditQuestion)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="content"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        placeholder="질문 내용을 입력하세요"
+                        className="min-h-[200px] resize-none focus-visible:ring-senior text-lg"
+                        disabled={isEditing}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" type="button">취소</Button>
+                </DialogClose>
+                <Button
+                  type="submit"
+                  disabled={isEditing}
+                  className="bg-senior hover:bg-senior-hover"
+                >
+                  {isEditing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      수정 중...
+                    </>
+                  ) : '수정 완료'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

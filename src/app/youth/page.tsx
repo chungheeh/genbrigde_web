@@ -25,6 +25,17 @@ import { toast } from 'sonner'
 import { Coins } from 'lucide-react'
 import { fetchProfile } from '@/features/profile/api'
 import { Profile } from '@/features/profile/types'
+import * as z from 'zod'
+import { textValidationSchema } from '@/lib/validation'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from '@/components/ui/form'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 
 interface YouthHomeProps {
   params: {
@@ -99,6 +110,16 @@ const itemVariants = {
   }
 }
 
+// 수정용 폼 스키마 정의
+const editFormSchema = z.object({
+  content: z.string()
+    .min(10, '답변은 최소 10자 이상이어야 합니다.')
+    .max(2000, '답변은 최대 2000자까지 입력 가능합니다.')
+    .pipe(textValidationSchema)
+})
+
+type EditFormValues = z.infer<typeof editFormSchema>
+
 export default function YouthHome({ params }: YouthHomeProps) {
   const router = useRouter()
   const [stats, setStats] = useState({
@@ -106,9 +127,16 @@ export default function YouthHome({ params }: YouthHomeProps) {
   })
   const [recentAnswers, setRecentAnswers] = useState<Answer[]>([])
   const [editingAnswer, setEditingAnswer] = useState<Answer | null>(null)
-  const [editContent, setEditContent] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
+  
+  // useForm 훅 추가
+  const form = useForm<EditFormValues>({
+    resolver: zodResolver(editFormSchema),
+    defaultValues: {
+      content: '',
+    }
+  })
 
   const supabase = createClientComponentClient()
 
@@ -218,14 +246,14 @@ export default function YouthHome({ params }: YouthHomeProps) {
     }
   }, [supabase])
 
-  const handleEditAnswer = async () => {
-    if (!editingAnswer || !editContent.trim()) return
+  const handleEditAnswer = async (values: EditFormValues) => {
+    if (!editingAnswer) return
 
     setIsEditing(true)
     try {
       const { error } = await supabase
         .from('answers')
-        .update({ content: editContent.trim() })
+        .update({ content: values.content.trim() })
         .eq('id', editingAnswer.id)
 
       if (error) throw error
@@ -234,14 +262,14 @@ export default function YouthHome({ params }: YouthHomeProps) {
       setRecentAnswers(prev =>
         prev.map(answer =>
           answer.id === editingAnswer.id
-            ? { ...answer, content: editContent.trim() }
+            ? { ...answer, content: values.content.trim() }
             : answer
         )
       )
 
       toast.success('답변이 수정되었습니다.')
       setEditingAnswer(null)
-      setEditContent('')
+      form.reset() // 폼 초기화
     } catch (error) {
       console.error('답변 수정 실패:', error)
       toast.error('답변 수정에 실패했습니다.')
@@ -249,6 +277,13 @@ export default function YouthHome({ params }: YouthHomeProps) {
       setIsEditing(false)
     }
   }
+
+  // 답변 편집 다이얼로그가 열릴 때 폼 값 설정
+  useEffect(() => {
+    if (editingAnswer) {
+      form.reset({ content: editingAnswer.content })
+    }
+  }, [editingAnswer, form])
 
   return (
     <motion.div 
@@ -361,7 +396,6 @@ export default function YouthHome({ params }: YouthHomeProps) {
                         className="text-youth hover:text-youth-hover hover:border-youth"
                         onClick={() => {
                           setEditingAnswer(answer)
-                          setEditContent(answer.content)
                         }}
                       >
                         <LucidePencil className="w-4 h-4 mr-2" />
@@ -375,26 +409,39 @@ export default function YouthHome({ params }: YouthHomeProps) {
                           {answer.question.title}에 대한 답변을 수정합니다.
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="py-4">
-                        <Textarea
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          placeholder="수정할 답변을 입력하세요"
-                          className="min-h-[200px]"
-                        />
-                      </div>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button variant="outline">취소</Button>
-                        </DialogClose>
-                        <Button
-                          onClick={handleEditAnswer}
-                          disabled={isEditing || !editContent.trim()}
-                          className="bg-youth hover:bg-youth-hover"
-                        >
-                          {isEditing ? '수정 중...' : '수정 완료'}
-                        </Button>
-                      </DialogFooter>
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(handleEditAnswer)} className="space-y-6">
+                          <FormField
+                            control={form.control}
+                            name="content"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="수정할 답변을 입력하세요"
+                                    className="min-h-[200px] resize-none focus-visible:ring-youth"
+                                    disabled={isEditing}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button variant="outline" type="button">취소</Button>
+                            </DialogClose>
+                            <Button
+                              type="submit"
+                              disabled={isEditing}
+                              className="bg-youth hover:bg-youth-hover"
+                            >
+                              {isEditing ? '수정 중...' : '수정 완료'}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </Form>
                     </DialogContent>
                   </Dialog>
                 </CardFooter>

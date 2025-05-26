@@ -8,15 +8,37 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { textValidationSchema } from '@/lib/validation';
 
-interface QuestionForm {
-  title: string;
-  content: string;
-}
+// Zod 스키마 정의
+const questionFormSchema = z.object({
+  title: z.string()
+    .min(2, '제목은 최소 2자 이상이어야 합니다.')
+    .max(100, '제목은 최대 100자까지 입력 가능합니다.')
+    .pipe(textValidationSchema),
+  content: z.string()
+    .min(10, '질문 내용은 최소 10자 이상이어야 합니다.')
+    .max(2000, '질문 내용은 최대 2000자까지 입력 가능합니다.')
+    .pipe(textValidationSchema)
+});
+
+type QuestionForm = z.infer<typeof questionFormSchema>;
 
 export default function AskPage() {
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors } } = useForm<QuestionForm>();
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors } 
+  } = useForm<QuestionForm>({
+    resolver: zodResolver(questionFormSchema),
+    defaultValues: {
+      title: '',
+      content: ''
+    }
+  });
 
   const onSubmit = async (data: QuestionForm) => {
     try {
@@ -82,7 +104,7 @@ export default function AskPage() {
             <div>
               <Input
                 placeholder="제목을 입력해주세요"
-                {...register('title', { required: '제목을 입력해주세요' })}
+                {...register('title')}
               />
               {errors.title && (
                 <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
@@ -92,7 +114,7 @@ export default function AskPage() {
               <Textarea
                 placeholder="질문 내용을 입력해주세요"
                 className="min-h-[200px]"
-                {...register('content', { required: '내용을 입력해주세요' })}
+                {...register('content')}
               />
               {errors.content && (
                 <p className="text-red-500 text-sm mt-1">{errors.content.message}</p>

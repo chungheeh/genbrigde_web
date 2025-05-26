@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LucideMessageCircle, LucideMic, LucideWallet, UserCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import { FontSizeButton } from '@/features/fontsize/components/FontSizeButton';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -107,6 +108,9 @@ export default function HomePage() {
         <div className="container mx-auto px-0 flex items-center">
           <div className="font-bold text-lg text-gb-black pl-2">GenBridge</div>
           <div className="flex-grow"></div>
+          <div className="mr-4">
+            <FontSizeButton />
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <motion.button 

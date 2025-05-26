@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { SeniorHeader } from "@/features/senior/components/SeniorHeader";
+import { AutoTutorial } from '@/features/tutorial/components/AutoTutorial';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { containsProhibitedWords } from '@/lib/validation';
+import { addPoints } from '@/features/points/api';
 
 interface Question {
   id: string;
@@ -193,6 +195,16 @@ export default function AnswersPage() {
     if (!selectedAnswerInfo) return;
 
     try {
+      // 답변 정보 가져오기
+      const { data: answerData, error: answerFetchError } = await supabase
+        .from('answers')
+        .select('user_id')
+        .eq('id', selectedAnswerInfo.answerId)
+        .single();
+
+      if (answerFetchError) throw answerFetchError;
+      if (!answerData || !answerData.user_id) throw new Error('답변 정보를 찾을 수 없습니다.');
+
       // 답변 상태 업데이트
       const { error: answerError } = await supabase
         .from('answers')
@@ -211,6 +223,25 @@ export default function AnswersPage() {
         .eq('id', selectedAnswerInfo.questionId);
 
       if (questionError) throw questionError;
+
+      // 포인트 부여
+      const pointsAmount = satisfaction === 'excellent' ? 5 : satisfaction === 'good' ? 3 : 1;
+      const pointsDescription = satisfaction === 'excellent' 
+        ? '답변이 매우 좋아요로 채택되었습니다.' 
+        : satisfaction === 'good'
+        ? '답변이 좋아요로 채택되었습니다.'
+        : '답변이 채택되었습니다.';
+      
+      const { success, message } = await addPoints(
+        answerData.user_id,
+        pointsAmount,
+        pointsDescription,
+        selectedAnswerInfo.answerId
+      );
+
+      if (!success) {
+        console.error('포인트 부여 실패:', message);
+      }
 
       toast.success('답변이 채택되었습니다.');
       await fetchQuestions();
@@ -250,6 +281,9 @@ export default function AnswersPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <SeniorHeader />
+
+      {/* 자동 튜토리얼 */}
+      <AutoTutorial />
 
       <div className="senior-nav">
         <div className="max-w-[1200px] mx-auto px-4">

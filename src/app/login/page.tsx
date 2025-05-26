@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { AuthError } from '@supabase/supabase-js';
 import LoginSuccess from '@/components/LoginSuccess';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import SocialLoginButtons from "@/components/SocialLoginButtons";
+import { Separator } from "@/components/ui/separator";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,8 +26,73 @@ export default function LoginPage() {
   const [youthEmail, setYouthEmail] = useState("");
   const [youthPassword, setYouthPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [loginSuccessOpen, setLoginSuccessOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
+
+  // 페이지 로드 시 인증 상태 확인
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        // 세션 확인
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("세션 확인 오류:", error);
+          return;
+        }
+        
+        // 로그인 되어있지 않은 경우
+        if (!session) {
+          setIsCheckingAuth(false);
+          return;
+        }
+        
+        // 이미 로그인된 사용자의 프로필 확인
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+        
+        if (profileError) {
+          // 프로필이 없는 경우 역할 선택 페이지로 이동
+          if (profileError.code === "PGRST116") {
+            console.log("프로필이 없음, 역할 선택 페이지로 이동");
+            router.push("/role-selection");
+            return;
+          }
+          
+          console.error("프로필 확인 오류:", profileError);
+          setIsCheckingAuth(false);
+          return;
+        }
+        
+        // 역할이 없는 경우 역할 선택 페이지로 이동
+        if (!profile.role) {
+          console.log("역할이 없음, 역할 선택 페이지로 이동");
+          router.push("/role-selection");
+          return;
+        }
+        
+        // 역할이 있는 경우 해당 역할 페이지로 이동
+        if (profile.role === "YOUTH") {
+          router.push("/youth");
+        } else if (profile.role === "SENIOR") {
+          router.push("/senior");
+        } else {
+          // 지원되지 않는 역할인 경우 로그아웃
+          await supabase.auth.signOut();
+          setIsCheckingAuth(false);
+        }
+      } catch (error) {
+        console.error("인증 확인 오류:", error);
+        setIsCheckingAuth(false);
+      }
+    };
+    
+    checkAuthStatus();
+  }, [supabase, router]);
 
   const handleAuthError = (error: AuthError) => {
     console.error('Auth error details:', error);
@@ -75,7 +142,6 @@ export default function LoginPage() {
       }
 
       console.log('Fetching profile...');
-      let userProfile = null;
       try {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -87,41 +153,26 @@ export default function LoginPage() {
 
         if (profileError) {
           if (profileError.code === 'PGRST116') {
-            // 프로필이 없는 경우 새로 생성
-            console.log('Creating new profile for user:', signInData.user.id);
-            const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
-              .insert({
-                id: signInData.user.id,
-                email: signInData.user.email,
-                name: signInData.user.user_metadata?.name || signInData.user.email?.split('@')[0] || '사용자',
-                role: 'YOUTH',
-                username: signInData.user.user_metadata?.username || signInData.user.email?.split('@')[0] || '사용자',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
-              .select('id, email, name, role, username')
-              .single();
-
-            if (createError) {
-              throw createError;
-            }
-            userProfile = newProfile;
+            // 프로필이 없는 경우 역할 선택 페이지로 리디렉션
+            console.log('프로필이 없습니다. 역할 선택 페이지로 리디렉션합니다.');
+            router.push('/role-selection');
+            return;
           } else {
             throw profileError;
           }
-        } else {
-          userProfile = profile;
         }
 
-        if (!userProfile) {
-          throw new Error('프로필을 찾을 수 없습니다.');
+        // 역할이 없는 경우 역할 선택 페이지로 리디렉션
+        if (!profile || !profile.role) {
+          console.log('역할이 설정되지 않았습니다. 역할 선택 페이지로 리디렉션합니다.');
+          router.push('/role-selection');
+          return;
         }
 
         // 역할 검사 시 대소문자 구분 없이 처리
-        const normalizedRole = userProfile.role?.toUpperCase();
+        const normalizedRole = profile.role?.toUpperCase();
         if (normalizedRole !== 'YOUTH') {
-          console.error('Invalid role:', userProfile.role);
+          console.error('Invalid role:', profile.role);
           toast.error('청년 계정이 아닙니다.');
           await supabase.auth.signOut();
           return;
@@ -193,87 +244,49 @@ export default function LoginPage() {
         return;
       }
 
-      // 프로필 조회 시도 (최대 3번)
-      let profile = null;
-      let profileError = null;
-      let attempts = 0;
-      const maxAttempts = 3;
+      // 프로필 확인
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', signInData.user.id)
+          .single();
 
-      while (!profile && attempts < maxAttempts) {
-        attempts++;
-        try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', signInData.user.id)
-            .single();
-
-          if (data) {
-            profile = data;
-            break;
-          }
-
-          if (error && error.code !== 'PGRST116') {
-            profileError = error;
-            break;
-          }
-
-          // PGRST116 (데이터 없음) 에러인 경우 다음 시도 전 대기
-          if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        } catch (error) {
-          console.error(`프로필 조회 시도 ${attempts} 실패:`, error);
-          if (attempts === maxAttempts) {
-            profileError = error;
+        // 프로필이 없는 경우 역할 선택 페이지로 리디렉션
+        if (profileError) {
+          if (profileError.code === 'PGRST116') {
+            console.log('프로필이 없습니다. 역할 선택 페이지로 리디렉션합니다.');
+            router.push('/role-selection');
+            return;
+          } else {
+            throw profileError;
           }
         }
-      }
 
-      // 프로필이 없는 경우 생성
-      if (!profile && !profileError) {
-        try {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: signInData.user.id,
-              email: signInData.user.email,
-              name: signInData.user.user_metadata.name || signInData.user.email?.split('@')[0] || '사용자',
-              role: 'SENIOR',
-              username: signInData.user.user_metadata.username || signInData.user.email?.split('@')[0] || '사용자'
-            })
-            .select()
-            .single();
+        // 역할이 없는 경우 역할 선택 페이지로 리디렉션
+        if (!profile || !profile.role) {
+          console.log('역할이 설정되지 않았습니다. 역할 선택 페이지로 리디렉션합니다.');
+          router.push('/role-selection');
+          return;
+        }
 
-          if (createError) {
-            throw createError;
-          }
-
-          profile = newProfile;
-        } catch (error) {
-          console.error('프로필 생성 에러:', error);
-          toast.error('프로필 생성에 실패했습니다.');
+        // 역할 확인
+        if (profile.role !== 'SENIOR') {
+          toast.error('시니어 계정이 아닙니다.');
           await supabase.auth.signOut();
           return;
         }
-      } else if (profileError) {
-        console.error('프로필 조회 에러:', profileError);
+
+        // 로그인 성공
+        setUserRole('SENIOR');
+        setLoginSuccessOpen(true);
+        router.refresh();
+      } catch (error: any) {
+        console.error('프로필 조회 에러:', error);
         toast.error('프로필 정보를 불러오는데 실패했습니다.');
         await supabase.auth.signOut();
         return;
       }
-
-      // 역할 확인
-      if (profile.role !== 'SENIOR') {
-        toast.error('시니어 계정이 아닙니다.');
-        await supabase.auth.signOut();
-        return;
-      }
-
-      // 로그인 성공
-      setUserRole('SENIOR');
-      setLoginSuccessOpen(true);
-      router.refresh();
     } catch (error) {
       console.error('예상치 못한 오류:', {
         name: error instanceof Error ? error.name : 'Unknown',
@@ -286,6 +299,37 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // 로딩 중일 때 표시할 컴포넌트
+  if (isCheckingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <svg
+            className="animate-spin h-8 w-8 text-green-500 mx-auto mb-4"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          <p className="text-gray-600">로그인 상태 확인 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -316,6 +360,17 @@ export default function LoginPage() {
             <div className="space-y-2">
               <h1 className="text-2xl font-bold text-center">로그인</h1>
               <p className="text-center text-gray-600">젠브릿지에 오신 것을 환영합니다</p>
+            </div>
+            
+            {/* 간편 로그인 섹션 */}
+            <div className="space-y-4">
+              <SocialLoginButtons />
+              
+              <div className="flex items-center gap-4 py-2">
+                <Separator className="flex-1" />
+                <span className="text-xs text-gray-500">또는</span>
+                <Separator className="flex-1" />
+              </div>
             </div>
             
             <Tabs defaultValue="청년" className="w-full">

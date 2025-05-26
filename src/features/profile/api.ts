@@ -1,6 +1,7 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Profile, Activity } from './types';
 import { Database } from '@/types/supabase';
+import { redirect } from 'next/navigation';
 
 export async function fetchProfile(): Promise<Profile> {
   const supabase = createClientComponentClient<Database>();
@@ -17,26 +18,17 @@ export async function fetchProfile(): Promise<Profile> {
 
   if (error) {
     if (error.code === 'PGRST116') {
-      // 프로필이 없는 경우 새로 생성
-      const { data: newProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: user.id,
-          email: user.email,
-          name: user.email?.split('@')[0] || '사용자',
-          username: user.email?.split('@')[0] || '사용자',
-          role: 'YOUTH',
-          points: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (createError) throw createError;
-      return newProfile;
+      // 프로필이 없는 경우 역할 선택 페이지로 리디렉션
+      console.log('프로필이 없습니다. 역할 선택 페이지로 리디렉션합니다.');
+      redirect('/role-selection');
     }
     throw error;
+  }
+
+  // 역할이 없는 경우 역할 선택 페이지로 리디렉션
+  if (!data.role) {
+    console.log('역할이 설정되지 않았습니다. 역할 선택 페이지로 리디렉션합니다.');
+    redirect('/role-selection');
   }
 
   return data;

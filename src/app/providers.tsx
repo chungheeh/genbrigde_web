@@ -10,6 +10,7 @@ import {
 import { ThemeProvider } from 'next-themes';
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState, type ReactNode } from "react";
+import { FontSizeInitializer } from '@/features/fontsize/components/FontSizeInitializer';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -55,6 +56,7 @@ export function Providers({ children }: ProvidersProps) {
       disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>
+        <FontSizeInitializer />
         {children}
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>

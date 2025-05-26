@@ -9,6 +9,8 @@ import { ko } from 'date-fns/locale'
 import { useProfile } from '@/features/profile/hooks/useProfile'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Profile, Activity } from '@/features/profile/api'
+import { getPointHistory } from '@/features/points/api'
+import { PointHistory } from '@/features/points/types'
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,7 @@ import { useState, useEffect } from 'react'
 import { SeniorHeader } from '@/features/senior/components/SeniorHeader'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { AutoTutorial } from '@/features/tutorial/components/AutoTutorial'
 
 // 임시 활동 타입 정의
 interface SampleActivity {
@@ -89,9 +92,10 @@ export default function SeniorProfilePage() {
           })
         }
 
-        // 데이터베이스에서 questions 테이블 확인
+        let allActivities: SampleActivity[] = []
+
+        // 질문 데이터 가져오기
         try {
-          // 사용자의 질문 데이터 가져오기
           const { data: questionsData, error: questionsError } = await supabase
             .from('questions')
             .select('*')
@@ -100,7 +104,7 @@ export default function SeniorProfilePage() {
             .limit(5)
 
           if (!questionsError && questionsData) {
-            // 질문 데이터를 활동 데이터 형식으로 변환
+            // 질문 데이터를 활동 데이터로 변환
             const questionActivities = questionsData.map(question => ({
               id: question.id,
               type: 'question' as const,
@@ -109,15 +113,40 @@ export default function SeniorProfilePage() {
               status: question.status === 'pending' ? '답변 대기중' : '답변 완료'
             }))
             
-            setActivities(questionActivities)
+            allActivities = [...allActivities, ...questionActivities]
           } else {
             console.log('질문 데이터를 가져올 수 없습니다:', questionsError)
-            setActivities([])
           }
         } catch (e) {
           console.error('질문 데이터 로딩 오류:', e)
-          setActivities([])
         }
+
+        // 포인트 데이터 가져오기
+        try {
+          const pointHistory = await getPointHistory(user.id)
+          
+          if (pointHistory && pointHistory.length > 0) {
+            // 포인트 내역을 활동 데이터로 변환
+            const pointActivities = pointHistory.map(point => ({
+              id: point.id,
+              type: 'point' as const,
+              title: point.description,
+              date: new Date(point.created_at),
+              status: point.type === 'EARN' ? `+${point.amount}P` : `-${point.amount}P`
+            }))
+            
+            allActivities = [...allActivities, ...pointActivities]
+          }
+        } catch (e) {
+          console.error('포인트 데이터 로딩 오류:', e)
+        }
+
+        // 날짜 기준으로 정렬
+        allActivities.sort((a, b) => b.date.getTime() - a.date.getTime())
+        
+        // 최대 10개만 표시
+        setActivities(allActivities.slice(0, 10))
+        
       } catch (e) {
         console.error('프로필 페이지 로딩 중 오류:', e)
         setError('데이터를 불러오는 중 오류가 발생했습니다.')
@@ -142,6 +171,7 @@ export default function SeniorProfilePage() {
     return (
       <div className="min-h-screen flex flex-col">
         <SeniorHeader />
+        <AutoTutorial />
         <div className="container mx-auto px-4 py-8">
           <div className="space-y-2 mb-6">
             <h2 className="text-2xl font-bold">내 프로필</h2>
@@ -194,6 +224,7 @@ export default function SeniorProfilePage() {
     return (
       <div className="min-h-screen flex flex-col">
         <SeniorHeader />
+        <AutoTutorial />
         <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center">
           <Card className="w-full max-w-md">
             <CardHeader>
@@ -214,6 +245,7 @@ export default function SeniorProfilePage() {
   return (
     <div className="min-h-screen flex flex-col">
       <SeniorHeader />
+      <AutoTutorial />
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-2 mb-6">
           <h2 className="text-2xl font-bold">내 프로필</h2>

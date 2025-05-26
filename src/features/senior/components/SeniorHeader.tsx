@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useLogout } from '@/hooks/useLogout'
+import { FontSizeButton } from '@/features/fontsize/components/FontSizeButton'
+import { TutorialButton } from '@/features/tutorial/components/TutorialButton'
 
 export function SeniorHeader() {
   const pathname = usePathname()
@@ -28,6 +30,8 @@ export function SeniorHeader() {
         
         {/* 데스크탑에서는 Nav 메뉴 */}
         <div className="flex items-center gap-4">
+          <TutorialButton />
+          <FontSizeButton />
           <button 
             onClick={handleLogout} 
             className="text-base text-muted-foreground hover:text-foreground cursor-pointer"

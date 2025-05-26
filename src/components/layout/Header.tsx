@@ -20,7 +20,7 @@ import { Profile } from '@/features/profile/types'
 
 const navigation = [
   { name: '답변하기', href: '/youth/questions' },
-  { name: '스토어', href: '/youth/points' },
+  { name: '스토어', href: '/youth/store' },
   { name: '홈', href: '/youth' },
 ]
 

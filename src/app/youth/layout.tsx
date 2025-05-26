@@ -3,7 +3,7 @@
 import Header from '@/components/layout/Header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { LucideHelpCircle, LucideShoppingBag, LucideUser, LucideMessageCircle, Home, MessageSquare, Coins } from 'lucide-react'
+import { LucideHelpCircle, LucideShoppingBag, LucideUser, LucideMessageCircle, Home, MessageSquare, Coins, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,11 @@ const navigation = [
     name: '포인트',
     href: '/youth/points',
     icon: Coins,
+  },
+  {
+    name: '스토어',
+    href: '/youth/store',
+    icon: ShoppingBag,
   },
 ]
 

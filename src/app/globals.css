@@ -67,3 +67,44 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 글씨 크기 조절 스타일 */
+html.text-normal {
+  font-size: 16px;
+}
+
+html.text-large {
+  font-size: 18px;
+}
+
+html.text-xlarge {
+  font-size: 20px;
+}
+
+@media (max-width: 768px) {
+  html.text-normal {
+    font-size: 14px;
+  }
+  
+  html.text-large {
+    font-size: 16px;
+  }
+  
+  html.text-xlarge {
+    font-size: 18px;
+  }
+}
+
+/* 글씨 크기 조절 컴포넌트 스타일 */
+.font-size-control {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+/* 노인 페이지에서 글씨 크기 조절 컴포넌트 위치 */
+.font-size-control-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}

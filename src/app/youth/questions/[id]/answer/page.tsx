@@ -18,6 +18,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { textValidationSchema } from '@/lib/validation';
 
 interface Question {
   id: string;
@@ -26,9 +29,15 @@ interface Question {
   created_at: string;
 }
 
-interface AnswerForm {
-  content: string;
-}
+// Zod 스키마 정의
+const answerFormSchema = z.object({
+  content: z.string()
+    .min(10, '답변은 최소 10자 이상이어야 합니다.')
+    .max(2000, '답변은 최대 2000자까지 입력 가능합니다.')
+    .pipe(textValidationSchema)
+});
+
+type AnswerForm = z.infer<typeof answerFormSchema>;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -40,7 +49,16 @@ export default function AnswerPage({ params }: PageProps) {
   const [question, setQuestion] = useState<Question | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<AnswerForm>();
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors } 
+  } = useForm<AnswerForm>({
+    resolver: zodResolver(answerFormSchema),
+    defaultValues: {
+      content: ''
+    }
+  });
   const supabase = createBrowserClient();
 
   useEffect(() => {
@@ -236,7 +254,7 @@ export default function AnswerPage({ params }: PageProps) {
                     placeholder="답변 내용을 입력해주세요"
                     className="min-h-[200px]"
                     disabled={isLoading}
-                    {...register('content', { required: '답변 내용을 입력해주세요' })}
+                    {...register('content')}
                   />
                   {errors.content && (
                     <p className="text-red-500 text-sm mt-1">{errors.content.message}</p>
